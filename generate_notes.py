@@ -13,62 +13,49 @@ OUTPUT_FOLDER = "./generated_notes"
 if not os.path.exists(OUTPUT_FOLDER):
     os.makedirs(OUTPUT_FOLDER)
 
-# --- STYLE ENGINE ---
-# This dictionary defines exactly HOW the AI should write.
-STYLE_CONFIG = {
-    "1": {
-        "name": "Cornell Notes",
-        "instruction": """
-        Use the Cornell Note-Taking System:
-        - SECTION 1: CUES. Create a list of key questions or keywords in the left margin.
-        - SECTION 2: NOTES. Provide the detailed explanations corresponding to the cues.
-        - SECTION 3: SUMMARY. A 3-4 sentence synthesis at the end of the document.
-        Format as: 
-        # Cues & Notes
-        **Cue:** [Keyword] -> **Note:** [Explanation]
-        # Summary
-        [Synthesis]
-        """
-    },
-    "2": {
-        "name": "Q&A / Exam Style",
-        "instruction": """
-        Transform the content into a Mock Exam paper.
-        - Create a series of challenging questions based on the material.
-        - Provide a comprehensive, marks-oriented answer for each.
-        Format as:
-        # Question 1: [The Question]
-        **Answer:** [Detailed Response]
-        """
-    },
-    "3": {
-        "name": "Cheat Sheet",
-        "instruction": """
-        Create an ultra-condensed reference guide.
-        - Remove all filler words.
-        - Focus on: Formulas, Key Dates, Definitions, and Critical Constants.
-        - Use dense bullet points and short fragments.
-        Format as:
-        # Quick Reference: [Topic]
-        - **[Term]:** [Short Definition]
-        """
-    },
-    "4": {
-        "name": "Deep Dive / Textbook",
-        "instruction": """
-        Write this like a professional academic textbook.
-        - Use a narrative flow with an introduction, detailed thematic chapters, and critical analysis.
-        - Explain the 'Why' and 'How' in depth.
-        - Use formal academic language.
-        Format as:
-        # Chapter: [Title]
-        [Deeply detailed paragraphs]
-        """
-    }
-}
+# --- THE STRICT STRUCTURE TEMPLATE ---
+# This forces the AI to follow your exact 7-point format
+STRUCTURE_TEMPLATE = """
+You must organize the notes using the following 7 sections EXACTLY. 
+Do not skip any section. If the provided context doesn't have enough information for a section, use your general knowledge to fill it, but keep the section header.
 
-# --- PREMIUM CSS STYLING ---
-def get_html_template(content, query, marks, style_name):
+1. Introduction
+   - Definition of the topic
+   - Purpose and core objective
+   - Primary conversion/function (e.g., X to Y)
+
+2. Working / Process
+   - Step-by-step mechanism
+   - Internal representations or methodologies
+   - Core operational flow
+
+3. Key Features
+   - List of essential tools/capabilities
+   - Specific technical components
+   - Unique identifiers or analysis capabilities
+
+4. Comparison / Analysis (e.g., Static vs Dynamic, or A vs B)
+   - Contrast the primary approach with an alternative
+   - Pros and cons of the current method
+   - Context of when to use which
+
+5. Advantages
+   - Why is this tool/method used?
+   - Specific benefits in industry or academia
+   - Support and compatibility
+
+6. Limitations
+   - What are the weaknesses?
+   - Common failure points or difficulties
+   - Required expertise level
+
+7. Conclusion
+   - Summary of its importance
+   - Industry status
+   - Final verdict on its utility
+"""
+
+def get_html_template(content, query):
     return f"""
     <html>
     <head>
@@ -79,8 +66,6 @@ def get_html_template(content, query, marks, style_name):
             .title {{ font-size: 22pt; color: #003366; font-weight: bold; }}
             .meta-box {{ background-color: #f4f4f4; border: 1px solid #ddd; padding: 10px; margin-bottom: 20px; border-radius: 5px; }}
             .topic-name {{ font-size: 14pt; font-weight: bold; }}
-            .mark-tag {{ color: #d9534f; font-weight: bold; }}
-            .style-tag {{ color: #007BFF; font-weight: bold; }}
             h1 {{ color: #b30000; font-size: 18pt; border-left: 5px solid #b30000; padding-left: 10px; background-color: #fff5f5; }}
             h2 {{ color: #003366; font-size: 14pt; border-bottom: 1px solid #ccc; }}
             .bullet-point {{ margin-left: 20px; font-size: 11pt; }}
@@ -88,16 +73,10 @@ def get_html_template(content, query, marks, style_name):
         </style>
     </head>
     <body>
-        <div class="header">
-            <div class="title">ACADEMIC STUDY NOTES</div>
-        </div>
-        <div class="meta-box">
-            <span class="topic-name">Topic: {query}</span> | 
-            <span class="mark-tag">Weightage: {marks} Marks</span> | 
-            <span class="style-tag">Style: {style_name}</span>
-        </div>
+        <div class="header"><div class="title">STRUCTURED STUDY NOTES</div></div>
+        <div class="meta-box"><span class="topic-name">Topic: {query}</span></div>
         <div class="content">{content}</div>
-        <div class="footer">Generated by Gemma 4 Local RAG</div>
+        <div class="footer">Generated by Gemma 4 Structured RAG</div>
     </body>
     </html>
     """
@@ -107,18 +86,19 @@ def format_ai_response_to_html(text):
     html_output = ""
     for line in lines:
         line = line.strip()
-        if not line: 
-            html_output += "<br/>"
-            continue
-        if line.startswith("# "): html_output += f"<h1>{line[2:]}</h1>"
-        elif line.startswith("## "): html_output += f"<h2>{line[3:]}</h2>"
-        elif line.startswith("- ") or line.startswith("* "): html_output += f'<div class="bullet-point">• {line[2:]}</div>'
-        else: html_output += f"<p>{line.replace('**', '<b>').replace('**', '</b>')}</p>"
+        if not line: continue
+        if line.startswith("1.") or line.startswith("2.") or line.startswith("3.") or \
+           line.startswith("4.") or line.startswith("5.") or line.startswith("6.") or line.startswith("7."):
+            html_output += f"<h1>{line}</h1>"
+        elif line.startswith("- ") or line.startswith("* "):
+            html_output += f'<div class="bullet-point">• {line[2:]}</div>'
+        else:
+            html_output += f"<p>{line.replace('**', '<b>').replace('**', '</b>')}</p>"
     return html_output
 
-def save_premium_pdf(content, filename, query, marks, style_name):
+def save_premium_pdf(content, filename, query):
     html_content = format_ai_response_to_html(content)
-    full_html = get_html_template(html_content, query, marks, style_name)
+    full_html = get_html_template(html_content, query)
     full_path = os.path.join(OUTPUT_FOLDER, f"{filename}.pdf")
     with open(full_path, "wb") as pdf_file:
         pisa.CreatePDF(full_html, dest=pdf_file)
@@ -130,51 +110,42 @@ def generate_study_notes():
     vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
     llm = Ollama(model=LLM_MODEL)
 
-    while True:
-        query = input("\n\nWhat do you want notes on? (or type 'exit' to stop): ")
-        if query.lower() == 'exit': break
-        
-        marks = input("How many marks? (e.g., 2, 5, 10): ")
-        
-        # --- STYLE SELECTION MENU ---
-        print("\nChoose a Note Style:")
-        for key, value in STYLE_CONFIG.items():
-            print(f"{key}. {value['name']}")
-        
-        style_choice = input("Enter style number (1-4): ")
-        selected_style = STYLE_CONFIG.get(style_choice, STYLE_CONFIG["4"]) # Default to Deep Dive
+    print("\n--- 📝 Structured Note Builder ---")
+    questions_input = input("Enter the topics/questions you want notes for (separated by commas): ")
+    questions = [q.strip() for q in questions_input.split(",")]
 
-        # Mark Instruction
-        if int(marks) <= 2: mark_instr = "Keep it very concise."
-        elif int(marks) <= 5: mark_instr = "Provide a structured, mid-length answer."
-        else: mark_instr = "Provide an exhaustive, high-scoring detailed answer."
-
-        print("\nSearching knowledge base...")
+    for query in questions:
+        print(f"\n🚀 Processing: {query}...")
+        
+        # Retrieval
         docs = vectorstore.similarity_search(query, k=5)
         context = "\n\n---\n\n".join([doc.page_content for doc in docs])
 
-        # Combine everything into the final prompt
+        # The Ultimate Prompt
         prompt = f"""
-        You are an expert professor. Use the context below to create notes.
+        You are an expert academic writer. Your task is to create a highly structured study guide based on the provided context.
         
-        STRICT STYLE REQUIREMENT: {selected_style['instruction']}
-        MARKS REQUIREMENT: {mark_instr}
+        STRICT FORMATTING REQUIREMENT:
+        You must use the following 7-section structure exactly. Do not use any other headings.
+        {STRUCTURE_TEMPLATE}
         
         CONTEXT:
         {context}
         
-        USER REQUEST: {query}
+        TOPIC: {query}
+        
+        Write the notes now. Be thorough and professional.
         """
 
-        print(f"Gemma 4 is drafting {selected_style['name']} notes...\n")
         response = llm.invoke(prompt)
         
-        file_name = input("Enter filename for PDF: ")
+        # Auto-generate filename based on query
+        file_name = query.replace(" ", "_").replace("?", "")
         try:
-            path = save_premium_pdf(response, file_name, query, marks, selected_style['name'])
-            print(f"✅ Success! Saved to: {path}")
+            path = save_premium_pdf(response, file_name, query)
+            print(f"✅ PDF Saved: {path}")
         except Exception as e:
-            print(f"❌ Error: {e}")
+            print(f"❌ Error saving {query}: {e}")
 
 if __name__ == "__main__":
     generate_study_notes()
