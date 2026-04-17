@@ -1,127 +1,231 @@
-🎓 Gemma Study Suite
-Local AI Academic Ecosystem
+# 🎓 Gemma Study Suite
+### Local AI Academic Ecosystem — Powered by Gemma 4 + Ollama
 
-A privacy-focused academic toolkit that transforms raw PDFs (textbooks, question papers, lecture notes) into professional study guides and interactive tutoring sessions.
+> A fully offline, privacy-first academic toolkit that transforms raw PDFs — textbooks, question papers, and lecture notes — into professional study guides and interactive tutoring sessions using a local RAG pipeline.
 
-Powered by Gemma 4 (via Ollama) and a local RAG (Retrieval-Augmented Generation) pipeline.
+---
 
-🌟 Key Features
-1. 📄 Professional Note Architect (generate_notes.py)
-🔹 Structured Academic Format
+## ✨ Overview
 
-Every generated note follows a strict 7-section format:
+Gemma Study Suite is a **modular, local-first AI study companion** that runs entirely on your machine. No cloud. No data leaks. Just intelligent, structured learning powered by **Gemma 4 (via Ollama)**, **ChromaDB**, and **LangChain**.
 
-Introduction → Working → Key Features → Analysis → Advantages → Limitations → Conclusion
-🔹 Premium PDF Styling
-HTML/CSS-based rendering
-Textbook-quality layout
-Color-coded headers
-Professional typography
-Meta-information boxes
-🔹 Batch Processing
-Generate notes for multiple topics/questions in one run
-🔹 Weightage-Aware Content
-Adjusts depth automatically for:
-2 marks
-5 marks
-10 marks
-2. 👨‍🏫 Socratic AI Tutor (tutor.py)
-🔹 Interactive Learning Model
-Teaches concepts in small modules
-Avoids direct answers
-🔹 Knowledge Validation
-After each explanation → asks Check-for-Understanding questions
-🔹 Adaptive Feedback
-Evaluates your response
-Re-explains if incorrect
-Progresses if correct
-3. 🏗️ Local Knowledge Base (ingest.py)
-🔹 Privacy First
-Fully offline system
-No cloud uploads
-🔹 Vector Indexing
-Uses:
-ChromaDB
-HuggingFace embeddings
-Builds a searchable semantic map of PDFs
-🛠️ Installation & Setup
-1. System Requirements
-Install Ollama
+```
+Your PDFs  →  Vector Indexing  →  RAG Pipeline  →  Gemma 4  →  Notes / Tutor
+```
 
-Download and install from official source.
+---
 
-Pull Gemma Model
-ollama pull gemma:2b
-2. Python Environment Setup
-# Create virtual environment
+## 🌟 Features
+
+### 📄 1. Professional Note Architect — `generate_notes.py`
+
+Generates exam-ready, structured notes in a strict **7-section academic format**:
+
+| Section | Purpose |
+|---|---|
+| **Introduction** | What & Why |
+| **Working** | How it operates |
+| **Key Features** | Core characteristics |
+| **Analysis** | Deep technical breakdown |
+| **Advantages** | Strengths & benefits |
+| **Limitations** | Trade-offs & drawbacks |
+| **Conclusion** | Summary & takeaways |
+
+**Additional highlights:**
+- 🎨 HTML/CSS-based rendering with textbook-quality layout
+- 🏷️ Color-coded headers and professional typography
+- 📦 Batch processing — generate notes for multiple topics in one run
+- ⚖️ Weightage-aware depth adjustment for **2-mark**, **5-mark**, and **10-mark** questions
+
+---
+
+### 👨‍🏫 2. Socratic AI Tutor — `tutor.py`
+
+An interactive, adaptive tutor that guides you through concepts using the Socratic method:
+
+```
+Select Topic
+    ↓
+Learn Concept (in small modules)
+    ↓
+Answer Check-for-Understanding Questions
+    ↓
+Adaptive Feedback (Re-explain or Progress)
+    ↓
+Master Topic ✅
+```
+
+- ❌ Avoids giving direct answers — builds genuine understanding
+- 🔄 Re-explains on incorrect responses
+- ✅ Advances when mastery is demonstrated
+
+---
+
+### 🏗️ 3. Local Knowledge Base — `ingest.py`
+
+Builds a fully local, searchable semantic index from your PDFs:
+
+- 🔒 **100% offline** — no data ever leaves your machine
+- 🧠 **HuggingFace `all-MiniLM-L6-v2`** embeddings for semantic understanding
+- 💾 **ChromaDB** as the persistent vector store
+- ⚡ Fast similarity search at query time
+
+---
+
+## 🛠️ Installation & Setup
+
+### Prerequisites
+
+1. **Install Ollama** — [Download from ollama.com](https://ollama.com)
+
+2. **Pull the Gemma model:**
+   ```bash
+   ollama pull gemma3:4b
+   ```
+
+### Python Environment
+
+```bash
+# Create and activate a virtual environment
 python -m venv venv
 
-# Activate environment
-# Linux/macOS
-source venv/bin/activate  
+# Linux / macOS
+source venv/bin/activate
 
 # Windows
 .\venv\Scripts\activate
-Install Dependencies
+```
+
+### Install Dependencies
+
+```bash
 pip install langchain langchain-community langchain-huggingface \
-langchain-text-splitters pypdf chromadb sentence-transformers xhtml2pdf
-📂 Project Structure
+    langchain-text-splitters pypdf chromadb \
+    sentence-transformers xhtml2pdf
+```
+
+---
+
+## 📂 Project Structure
+
+```
 gemma-study-suite/
-├── my_pdfs/              # 📚 INPUT: Source PDFs
-├── chroma_db/           # 💾 Knowledge base (generated)
-├── generated_notes/     # 📄 Output PDFs
-├── ingest.py            # ⚙️ Step 1: Index PDFs
-├── generate_notes.py    # 🚀 Step 2: Generate notes
-├── tutor.py             # 🎓 Step 3: Interactive tutor
+│
+├── my_pdfs/              # 📚 INPUT: Place your source PDFs here
+├── chroma_db/            # 💾 Auto-generated vector knowledge base
+├── generated_notes/      # 📄 Output: Styled PDF notes
+│
+├── ingest.py             # ⚙️  Step 1 — Index PDFs into ChromaDB
+├── generate_notes.py     # 🚀  Step 2 — Generate structured notes
+├── tutor.py              # 🎓  Step 3 — Launch interactive tutor
+│
 └── README.md
-🚀 Workflow Guide
-🔹 Phase 1: Indexing Your Material
-Place PDFs inside:
-my_pdfs/
-Run:
+```
+
+---
+
+## 🚀 Usage Guide
+
+### Step 1 — Index Your Material
+
+Place your PDFs inside `my_pdfs/`, then run:
+
+```bash
 python ingest.py
+```
 
-👉 This builds the ChromaDB vector database
+This builds the **ChromaDB vector database** from your documents.
 
-🔹 Phase 2: Generating Structured Notes
+---
 
-Run:
+### Step 2 — Generate Structured Notes
 
+```bash
 python generate_notes.py
-Input Example:
+```
+
+**Example input:**
+```
 IDA Pro, Web Attacks, RSA Encryption
-Output:
-Professionally formatted PDFs in:
-generated_notes/
-🔹 Phase 3: Interactive Learning
+```
 
-Run:
+**Output:** Professionally formatted PDFs saved to `generated_notes/`
 
+---
+
+### Step 3 — Interactive Tutoring Session
+
+```bash
 python tutor.py
-Flow:
-Select Topic → Learn Concept → Answer Questions → Get Feedback → Master Topic
-📐 Technical Architecture
-Component	Technology	Purpose
-LLM	Gemma 4 (Ollama)	Reasoning & tutoring
-Vector Store	ChromaDB	Store embeddings
-Embeddings	all-MiniLM-L6-v2	Text → vector conversion
-PDF Engine	xhtml2pdf + CSS	Styled PDF generation
-RAG Pipeline	LangChain	Retrieval + prompt flow
-🔁 System Flow
-User Query 
-   → Similarity Search (ChromaDB)
-   → Context Injection
-   → Gemma 4 (Structured/Socratic Prompt)
-   → HTML/CSS Template
-   → Final PDF Output
-🔐 Key Advantages
-100% offline & private
-Structured exam-ready notes
-Interactive learning system
-Modular & scalable architecture
-No dependency on external APIs
-📌 Use Cases
-📚 Exam preparation
-🧠 Concept mastery
-📄 Automated note generation
-🎓 Self-paced learning
+```
+
+Follow the on-screen prompts to select a topic and begin a guided learning session.
+
+---
+
+## 📐 Technical Architecture
+
+| Component | Technology | Role |
+|---|---|---|
+| **LLM** | Gemma 4 via Ollama | Reasoning, generation & tutoring |
+| **Vector Store** | ChromaDB | Stores and retrieves embeddings |
+| **Embeddings** | `all-MiniLM-L6-v2` | Converts text to semantic vectors |
+| **PDF Engine** | xhtml2pdf + CSS | Renders styled PDF output |
+| **RAG Pipeline** | LangChain | Orchestrates retrieval & prompts |
+
+### System Flow
+
+```
+User Query
+   │
+   ▼
+Similarity Search (ChromaDB)
+   │
+   ▼
+Context Injection into Prompt
+   │
+   ▼
+Gemma 4 — Structured / Socratic Prompt
+   │
+   ▼
+HTML/CSS Template Rendering
+   │
+   ▼
+Final PDF Output  ✅
+```
+
+---
+
+## 🔐 Privacy & Design Philosophy
+
+| Principle | Implementation |
+|---|---|
+| ✅ Fully offline | Gemma runs locally via Ollama |
+| ✅ No cloud uploads | ChromaDB stores data on-disk |
+| ✅ No API keys needed | Zero external service dependency |
+| ✅ Modular design | Each script works independently |
+| ✅ Scalable | Add more PDFs anytime and re-index |
+
+---
+
+## 📌 Use Cases
+
+- 📚 **Exam preparation** — Structured notes for any syllabus
+- 🧠 **Concept mastery** — Socratic dialogue builds real understanding
+- 📄 **Automated note generation** — Batch-convert textbook chapters
+- 🎓 **Self-paced learning** — Study at your own pace, offline, privately
+
+---
+
+## 📜 License
+
+This project is open-source. Refer to the `LICENSE` file for details.
+
+---
+
+<div align="center">
+
+**Built for students who take their privacy seriously.**  
+*No subscriptions. No tracking. Just learning.*
+
+</div>
