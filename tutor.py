@@ -1,87 +1,81 @@
 import os
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.llms import Ollama
+from langchain_ollama import OllamaLLM
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.enums import TA_JUSTIFY
 
 # --- Configuration ---
 DB_PATH = "./chroma_db"
 EMBEDDING_MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
-LLM_MODEL = "gemma4:e2b" 
+LLM_MODEL = "gemma:2b" 
+OUTPUT_FOLDER = "./generated_notes"
+
+if not os.path.exists(OUTPUT_FOLDER): os.makedirs(OUTPUT_FOLDER)
+
+def save_session_to_pdf(history, filename="Tutor_Session.pdf"):
+    doc = SimpleDocTemplate(os.path.join(OUTPUT_FOLDER, filename), pagesize=A4)
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name='TutorStyle', fontName='Helvetica-Bold', fontSize=12, textColor=colors.darkblue, spaceBefore=10))
+    styles.add(ParagraphStyle(name='UserStyle', fontName='Helvetica-Oblique', fontSize=12, textColor=colors.black, spaceBefore=5))
+    
+    story = []
+    story.append(Paragraph("Tutor Session Transcript", styles['Title']))
+    
+    for entry in history:
+        if entry['role'] == 'tutor':
+            story.append(Paragraph(f"<b>Tutor:</b> {entry['text']}", styles['TutorStyle']))
+        else:
+            story.append(Paragraph(f"<i>User:</i> {entry['text']}", styles['UserStyle']))
+        story.append(Spacer(1, 6))
+    
+    doc.build(story)
+    print(f"\n✅ Session saved to: {filename}")
 
 def start_tutor_session():
-    # 1. Initialize RAG Components
     embeddings = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL_NAME)
-    if not os.path.exists(DB_PATH):
-        print("Error: Database not found. Please run ingest.py first!")
-        return
+    if not os.path.exists(DB_PATH): return
     vectorstore = Chroma(persist_directory=DB_PATH, embedding_function=embeddings)
-    llm = Ollama(model=LLM_MODEL)
+    llm = OllamaLLM(model=LLM_MODEL)
 
-    print("\n" + "="*50)
-    print("🎓 WELCOME TO YOUR AI PERSONAL TUTOR 🎓")
-    print("I will teach you based on your PDFs using the Socratic Method.")
-    print("I'll explain a concept, then ask you a question to test your knowledge.")
-    print("Type 'exit' to end the session.")
-    print("="*50)
-
-    topic = input("\nWhat topic would you like to learn today? ")
+    print("\n🎓 WELCOME TO THE AI TUTOR 🎓")
+    topics_input = input("Which topics should I scan and teach you? (separated by commas): ")
+    topics = [t.strip() for t in topics_input.split(",")]
     
-    # Initial retrieval of the whole topic context
-    docs = vectorstore.similarity_search(topic, k=5)
-    full_context = "\n\n---\n\n".join([doc.page_content for doc in docs])
-
-    # System Prompt to define the "Tutor Persona"
-    system_persona = f"""
-    You are a patient and brilliant Socratic Tutor. Your goal is to teach the user the following topic: {topic}.
+    session_history = []
     
-    RULES FOR TEACHING:
-    1. DO NOT dump all the information at once. 
-    2. Break the topic into small, digestible "Learning Modules".
-    3. Explain ONE concept clearly using the provided context.
-    4. After the explanation, ask the user a targeted "Check-for-Understanding" question.
-    5. Wait for the user's answer. 
-    6. If the user is correct, praise them and move to the next concept.
-    7. If the user is wrong, gently correct them and re-explain the concept in a different way.
-    8. Always stay strictly based on the provided context.
+    for topic in topics:
+        print(f"\n--- Switching to Topic: {topic} ---")
+        docs = vectorstore.similarity_search(topic, k=5)
+        context = "\n\n".join([doc.page_content for doc in docs])
+        
+        system_persona = f"You are a Socratic Tutor. Teach {topic} using this context: {context}. Explain one concept, then ask a question. Wait for the answer before moving on."
+        
+        chat_history = ""
+        current_prompt = system_persona + "\n\nStart by introducing the topic."
+        
+        while True:
+            response = llm.invoke(current_prompt + "\n\nHistory:\n" + chat_history)
+            print(f"\n👨‍🏫 Tutor: {response}")
+            
+            session_history.append({'role': 'tutor', 'text': response})
+            
+            user_input = input("\nYour Answer (or 'next' to move topic, 'exit' to quit): ")
+            session_history.append({'role': 'user', 'text': user_input})
+            
+            if user_input.lower() == 'exit': 
+                save_session_to_pdf()
+                return
+            if user_input.lower() == 'next': 
+                break
+                
+            chat_history += f"\nTutor: {response}\nUser: {user_input}"
+            current_prompt = f"{system_persona}\n\nEvaluate the user's answer and move to the next concept if correct."
 
-    CONTEXT FOR TEACHING:
-    {full_context}
-    """
-
-    # Initial state
-    current_prompt = system_persona + "\n\nStart the session by introducing the topic briefly and explaining the first core concept. Then ask me the first question."
-    
-    chat_history = "" # To keep track of the conversation
-
-    while True:
-        # Get response from Gemma 4
-        response = llm.invoke(current_prompt + "\n\nChat History:\n" + chat_history)
-        
-        print("\n\n--- 👨‍🏫 TUTOR ---")
-        print(response)
-        print("\n" + "-"*20)
-        
-        user_input = input("\nYour Answer: ")
-        
-        if user_input.lower() == 'exit':
-            print("\nGreat job today! Keep studying. Goodbye! 👋")
-            break
-        
-        # Update chat history and create the next prompt
-        chat_history += f"\nTutor: {response}\nUser: {user_input}"
-        
-        # The prompt for the next turn focuses on evaluating the user's answer
-        current_prompt = f"""
-        {system_persona}
-        
-        The user has just answered your question. 
-        1. Evaluate if their answer is correct based on the context.
-        2. Provide feedback (Correct/Incorrect).
-        3. If correct, move to the next sub-topic or concept.
-        4. If incorrect, re-explain and ask the question again.
-        
-        Remember: keep explanations short and always end with a question.
-        """
+    save_session_to_pdf()
 
 if __name__ == "__main__":
     start_tutor_session()
